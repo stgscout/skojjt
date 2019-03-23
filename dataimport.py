@@ -69,8 +69,13 @@ def GetBackupXML():
             for e in all:
                 xml += '<' + kind + '>\r\n'
                 for n, v in e._properties.items():
+                    try:
+                        data = str(getattr(e, n))
+                    except AttributeError as err:
+                        logging.warning("Data missing: %s" % err)
+                        continue
                     xml += '  <' + n + '>'
-                    xml += str(getattr(e, n))
+                    xml += data
                     xml += '</' + n + '>\r\n'
                 xml += '</' + kind + '>\r\n'
 

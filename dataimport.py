@@ -125,6 +125,9 @@ class ScoutnetImporter:
     def GetOrCreateGroup(self, name, scoutnetID):
         if len(name) == 0:
             return None
+        if name == u'Sjöscoutkåren S:t Göran':  # Fix for change of name.
+            self.result.append("Rewrite to old StG name.")
+            name = u'S:t Göran, Sjöscoutkåren'
         group = ScoutGroup.get_by_id(ScoutGroup.getid(name), use_memcache=True)
         if group == None:
             self.result.append(u"Ny kår %s, id=%s" % (name, str(scoutnetID)))

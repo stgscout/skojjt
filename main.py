@@ -13,6 +13,7 @@ from groupsummary import groupsummary
 from persons import persons
 from scoutgroupinfo import scoutgroupinfo
 from start import start
+from badges import badges
 
 app = Flask(__name__)
 app.debug = True
@@ -30,9 +31,11 @@ def home():
     user.attemptAutoGroupAccess()
     starturl = '/start/'
     personsurl = '/persons/'
+    badgesurl = '/badges/'
     if user.groupaccess != None:
         starturl += user.groupaccess.urlsafe() + '/'
         personsurl += user.groupaccess.urlsafe() + '/'
+        badgesurl += user.groupaccess.urlsafe() + '/'
     return render_template('start.html',
                            heading='Hem',
                            items=[],
@@ -40,11 +43,13 @@ def home():
                            user=user,
                            starturl=starturl,
                            personsurl=personsurl,
+                           badgesurl=badgesurl,
                            logouturl=users.create_logout_url('/')
                            )
 
 app.register_blueprint(start, url_prefix='/start')
 app.register_blueprint(persons, url_prefix='/persons')
+app.register_blueprint(badges, url_prefix='/badges')
 app.register_blueprint(scoutgroupinfo, url_prefix='/scoutgroupinfo')
 app.register_blueprint(groupsummary, url_prefix='/groupsummary')
 app.register_blueprint(import_page, url_prefix='/import')

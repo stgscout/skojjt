@@ -24,16 +24,17 @@ class Badge(ndb.Model):
                            short_desc=badge_part[1],
                            long_desc=badge_part[2])
             bp.put()
-    
+
+    def get_parts(self):
+        return BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
+
     def update(self, badge_parts):
-        prevs = BadgePart.query(badge==self).order(BadgePart.idx).fetch()
+        prevs = BadgePart.query(badge==self.key).order(BadgePart.idx).fetch()
         # Go through parts, update, add or remove
         # If remove, also remove all BadgePartDone
 
 
     # get_by_id is there already
-
-    
 
     @staticmethod
     def get_badges(scoutgroup_key):

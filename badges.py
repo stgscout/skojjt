@@ -12,35 +12,31 @@ from flask import Blueprint, make_response, redirect, render_template, request
 from google.appengine.ext import ndb # pylint: disable=import-error
 
 import htmlform
-import lagerbidrag
-import scoutnet
-import sensus
-from excelreport import ExcelReport
-from jsonreport import JsonReport
 from data import Meeting, Person, ScoutGroup, Semester, Troop, TroopPerson, UserPrefs
 from dakdata import DakData, Deltagare, Sammankomst
 from start import semester_sort
+from data_badge import Badge, BadgePart
 
 
 Krav = namedtuple("Krav", "index short long")
 
-badges = Blueprint('badges_page', __name__, template_folder='templates') # pylint : disable=invalid-name
+badges = Blueprint('badges_page', __name__, template_folder='templates')  # pylint : disable=invalid-name
 
 @badges.route('/')
-@badges.route('/<sgroup_url>', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<troop_url>', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<troop_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<troop_url>/<key_url>', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<troop_url>/<key_url>/', methods=['POST', 'GET'])
-def show(sgroup_url=None, troop_url=None, key_url=None):
+@badges.route('/<sgroup_url>')
+@badges.route('/<sgroup_url>/')
+@badges.route('/<sgroup_url>/<badge_url>', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/<badge_url>/', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/<badge_url>/<action>', methods=['POST', 'GET'])
+def show(sgroup_url=None, badge_url=None, action=None):
+    logging.info("badges.py: sgroup_url=%s, badge_url=%s, action=%s", sgroup_url, badge_url, action)
     user = UserPrefs.current()
     if not user.hasAccess():
         return "denied badges", 403
 
-    breadcrumbs = [{'link':'/', 'text':'Hem'}]
-    section_title = u'Märken/Kår'
-    breadcrumbs.append({'link':'/badges', 'text':section_title})
+    breadcrumbs = [{'link': '/', 'text': 'Hem'}]
+    section_title = u'Märken'
+    breadcrumbs.append({'link': '/badges', 'text': section_title})
     baselink = '/badges/'
 
     scoutgroup = None
@@ -48,40 +44,67 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
         sgroup_key = ndb.Key(urlsafe=sgroup_url)
         scoutgroup = sgroup_key.get()
         baselink += sgroup_url + "/"
-        breadcrumbs.append({'link':baselink, 'text':scoutgroup.getname()})
-    
-    troop = None
-    semester = user.activeSemester.get()
-    if troop_url is not None:
-        baselink += troop_url + "/"
-        troop_key = ndb.Key(urlsafe=troop_url)
-        troop = troop_key.get()
-        breadcrumbs.append({'link':baselink, 'text':troop.getname()})
-        semester = troop.semester_key.get()
-    
+        breadcrumbs.append({'link': baselink, 'text': scoutgroup.getname()})
+
+    if scoutgroup is None:
+        return render_template(
+            'index.html',
+            heading=section_title,
+            baselink=baselink,
+            items=ScoutGroup.getgroupsforuser(user),
+            breadcrumbs=breadcrumbs,
+            username=user.getname())
+
+    if badge_url == "newbadge":
+        logging.info("METHOD %s" % request.method)
+        if request.method == "POST":
+            logging.info("SAVE BADGE")
+            name = request.form['name']
+            part_strs = request.form['parts'].split("::")
+            # TODO. Check possible utf-8/unicode problem here
+            parts = [p.split("|") for p in part_strs]
+            logging.info("name: %s, parts: %s", name, parts)
+            logging.info("raw_partsinfo %s", request.form['parts'])
+            badge = Badge.create(name, sgroup_key, parts)
+        elif request.method == "GET":
+            section_title = "Nytt märke"
+            baselink += "newbadge" + "/"
+            breadcrumbs.append({'link': baselink, 'text': section_title})
+            badge_parts = [
+                {'part_id': 1, 'short_desc': "Utrustning", "long_desc": "Kontrollera att behövlig utrustning finns ombord"},
+                {'part_id': 2, 'short_desc': 'sjökort', 'long_desc': 'Visa grundläggande kunskap om sjökort alternativt har tagit förarbevis'}
+            ]
+
+            return render_template('badge.html',
+                                   heading=section_title,
+                                   baselink=baselink,
+                                   breadcrumbs=breadcrumbs,
+                                   badge_parts=badge_parts,
+                                   scoutgroup=scoutgroup)
+        else:
+            badge_url = None  # Reset for now. TODO. Improve
+
+    badge = None
+    if badge_url is not None and badge_url != "newbadge":
+        baselink += badge_url + "/"
+        badge_key = ndb.Key(urlsafe=badge_url)
+        badge = badge_key.get()
+        section_title = badge.getname()
+        breadcrumbs.append({'link': baselink, 'text': badge.getname()})
+
     logging.info("In BADGES")
-    
-    # render main pages
-    if scoutgroup is None or troop is None:
+    logging.info("ScoutGroup=%s, Badge=%s", scoutgroup, badge)
+
+    # render list of badges
+    if badge is None:
+        if not user.hasGroupKeyAccess(sgroup_key):
+            return "denied", 403
         section_title = 'Märken för kår'
-        newEB = {'name': "C-skeppare",
-                 'shortdesc': ['Utrustning', 'Sjökort', 'Revning'],
-                 'longdesc':['Kontrollera att behövlig utrustning finns ombord',
-                             'Visa grundläggande kunskap om sjökort alternativt har tagit förarbevis',
-                             'Skär i försegel och revad stor, sätt segel och lägg ut, slå vid lämpligt tillfälle ut revet']}
-        return render_template('badgeform.html',
-                               heading=section_title,
-                               baselink=baselink,
-                               eb=newEB,
-                               breadcrumbs=breadcrumbs)
-    elif key_url is not None:
-        meeting = ndb.Key(urlsafe=key_url).get()
-        section_title = meeting.getname()
-        baselink += key_url + "/"
-        breadcrumbs.append({'link':baselink, 'text':section_title})
-        return render_template('meeting.html',
-                               heading=section_title,
-                               baselink=baselink,
-                               existingmeeting=meeting,
-                               breadcrumbs=breadcrumbs,
-                               semester=troop.semester_key.get())
+        badges = Badge.get_badges(sgroup_key)
+        logging.info("Length of badges is %d", len(badges))
+
+        return render_template('badgelist.html',
+                            heading=section_title,
+                            baselink=baselink,
+                            badges=badges,
+                            breadcrumbs=breadcrumbs)

@@ -137,5 +137,26 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                                scoutgroup=scoutgroup)
         # Show or edit badge further down
 
-    logging.info("In BADGES")
-    logging.info("ScoutGroup=%s, Badge=%s", scoutgroup, badge)
+    if troop_url is not None:
+        # Since we come from /start/... instead of /badges/... replace part links
+        for bc in breadcrumbs:
+            bc['link'] = bc['link'].replace('badges', 'start')
+            bc['text'] = bc['text'].replace('Märken', 'Kårer')
+        baselink += "troop/" + troop_url + "/"
+        badges = Badge.get_badges(sgroup_key)
+        troop_key = ndb.Key(urlsafe=troop_url)
+        troop = troop_key.get()
+        semester_key = troop.semester_key
+        semester = semester_key.get()
+        semester_name = semester.getname()
+        section_title = "Märken för %s %s" % (troop.name, semester_name)
+        breadcrumbs.append({'link': baselink, 'text': "Märken %s %s" % (troop.name, semester_name)})
+        badges_for_troop = []
+        return render_template('badges_for_troop.html',
+                               name=troop.name,
+                               heading=section_title,
+                               baselink=baselink,
+                               breadcrumbs=breadcrumbs,
+                               badges=badges,
+                               badges_for_troop=badges_for_troop,
+                               scoutgroup=scoutgroup)

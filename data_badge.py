@@ -28,9 +28,29 @@ class Badge(ndb.Model):
     def get_parts(self):
         return BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
 
-    def update(self, badge_parts):
-        prevs = BadgePart.query(badge==self.key).order(BadgePart.idx).fetch()
-        # Go through parts, update, add or remove
+    def update(self, name, badge_parts):
+        if name != self.name:
+            self.name = name
+            self.put()
+        prevs = BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
+        for old, new in zip(prevs, badge_parts):
+            if old.idx != int(new[0]):
+                logging.info("Badge part numbers don't match: %d %d" % (old.idx, int(new[0])))
+                break
+            if old.short_desc != new[1] or old.long_desc != new[2]:
+                old.short_desc = new[1]
+                old.long_desc = new[2]
+                old.put()
+        if len(badge_parts) > len(prevs):
+            for new in badge_parts[len(prevs):]:
+                bp = BadgePart(badge=self.key,
+                               idx=int(new[0]),
+                               short_desc=new[1],
+                               long_desc=new[2])
+                bp.put()
+        else:
+            for bp in prevs[len(badge_parts):]:
+                bp.delete()
         # If remove, also remove all BadgePartDone
 
 
@@ -114,8 +134,13 @@ class BadgeProgress(ndb.Model):
             'parts_done': parts_idx.sorted()}
 
 
-class TroopBadges(ndb.Model):
-    "Märken för avdelning och termin."
-    troop = ndb.KeyProperty(kind=Troop)
-    badges = ndb.KeyProperty("Badge", repeated=True)
+class TroopBadge(ndb.Model):
+    "Märke för avdelning och termin."
+    troop_key = ndb.KeyProperty(kind=Troop)
+    badge_key = ndb.KeyProperty(kind=Badge)
+    idx = ndb.IntegerProperty(required=True)  # For sorting
 
+    @staticmethod
+    def getBadgesForTroop(troop):
+        tps = TroopBadge.query(TroopBadge.troop_key == troop.key).order(TroopBadge.idx).fetch()
+        return [Badge.get_by_id(tp.troop_key) for tp in tps]

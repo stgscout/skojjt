@@ -23,13 +23,23 @@ Krav = namedtuple("Krav", "index short long")
 badges = Blueprint('badges_page', __name__, template_folder='templates')  # pylint : disable=invalid-name
 
 @badges.route('/')
-@badges.route('/<sgroup_url>')
+@badges.route('/<sgroup_url>')  # List of badges for a scout group
 @badges.route('/<sgroup_url>/')
-@badges.route('/<sgroup_url>/<badge_url>', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<badge_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/<badge_url>/<action>', methods=['POST', 'GET'])
-def show(sgroup_url=None, badge_url=None, action=None):
-    logging.info("badges.py: sgroup_url=%s, badge_url=%s, action=%s", sgroup_url, badge_url, action)
+@badges.route('/<sgroup_url>/badge/<badge_url>', methods=['POST', 'GET'])  # A specific badge, post with newbadge
+@badges.route('/<sgroup_url>/badge/<badge_url>/', methods=['POST', 'GET'])  # A specific badge, post with newbadge
+@badges.route('/<sgroup_url>/badge/<badge_url>/<action>', methods=['POST', 'GET'])  # A specific badge, post with newbadge
+@badges.route('/<sgroup_url>/badge/<badge_url>/<action>/', methods=['POST', 'GET'])  # A specific badge, post with newbadge
+@badges.route('/<sgroup_url>/troop/<troop_url>', methods=['POST', 'GET'])  # List of badges for a troop
+@badges.route('/<sgroup_url>/troop/<troop_url>/', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>', methods=['POST', 'GET'])  # Status/Update
+@badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>/', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/person/<person_url>')  # List of badges for a person
+@badges.route('/<sgroup_url>/person/<person_url>/')  # List of badges for a person
+@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>', methods=['POST', 'GET'])  # Status/Update
+@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/', methods=['POST', 'GET'])
+def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, action=None):
+    logging.info("badges.py: sgroup_url=%s, badge_url=%s, troop_url=%s, person_url=%s, action=%s",
+                 sgroup_url, badge_url, troop_url, person_url, action)
     user = UserPrefs.current()
     if not user.hasAccess():
         return "denied badges", 403
@@ -55,34 +65,57 @@ def show(sgroup_url=None, badge_url=None, action=None):
             breadcrumbs=breadcrumbs,
             username=user.getname())
 
-    if badge_url == "newbadge":
-        logging.info("METHOD %s" % request.method)
+    if troop_url is None and person_url is None:  # scoutgroup level
+        if badge_url is None:
+            # render list of badges
+            section_title = 'Märken för kår'
+            badges = Badge.get_badges(sgroup_key)
+            logging.info("Length of badges is %d", len(badges))
+
+            return render_template('badgelist.html',
+                                    heading=section_title,
+                                    baselink=baselink,
+                                    badges=badges,
+                                    breadcrumbs=breadcrumbs)
+
+        logging.info("badge_url=%s, action=%s", badge_url, action)
         if request.method == "GET":
-            section_title = "Nytt märke"
-            baselink += "newbadge" + "/"
+            if badge_url == "newbadge":  # Get form for or create new
+                section_title = "Nytt märke"
+                name = ""
+                badge_parts = []
+            else:
+                section_title = "Märke"
+                badge_key = ndb.Key(urlsafe=badge_url)
+                badge = badge_key.get()
+                name = badge.name
+                badge_parts = badge.get_parts()
+
+            baselink += badge_url + "/"
             breadcrumbs.append({'link': baselink, 'text': section_title})
-            badge_parts = [
-                {'idx': 1, 'short_desc': "Utrustning", "long_desc": "Kontrollera att behövlig utrustning finns ombord"},
-                {'idx': 2, 'short_desc': 'sjökort', 'long_desc': 'Visa grundläggande kunskap om sjökort alternativt har tagit förarbevis'}
-            ]
 
             return render_template('badge.html',
-                                   name="",
-                                   heading=section_title,
-                                   baselink=baselink,
-                                   breadcrumbs=breadcrumbs,
-                                   badge_parts=badge_parts,
-                                   scoutgroup=scoutgroup)
+                                    name=name,
+                                    heading=section_title,
+                                    baselink=baselink,
+                                    breadcrumbs=breadcrumbs,
+                                    badge_parts=badge_parts,
+                                    action=action,
+                                    scoutgroup=scoutgroup)
         if request.method == "POST":
-            logging.info("SAVE BADGE")
             name = request.form['name']
             part_strs = request.form['parts'].split("::")
             # TODO. Check possible utf-8/unicode problem here
             parts = [p.split("|") for p in part_strs]
             logging.info("name: %s, parts: %s", name, parts)
-            logging.info("raw_partsinfo %s", request.form['parts'])
-            badge = Badge.create(name, sgroup_key, parts)
-            return redirect(baselink)
+            if badge_url == "newbadge":
+                badge = Badge.create(name, sgroup_key, parts)
+                return redirect(breadcrumbs[-2]['link'])
+            else:  # Update an existing badge
+                badge_key = ndb.Key(urlsafe=badge_url)
+                badge = badge_key.get()
+                badge.update(name, parts)
+                return redirect(breadcrumbs[-2]['link'])
         else:
             return "Unsupported method %s" % request.method
 
@@ -106,15 +139,3 @@ def show(sgroup_url=None, badge_url=None, action=None):
 
     logging.info("In BADGES")
     logging.info("ScoutGroup=%s, Badge=%s", scoutgroup, badge)
-
-    # render list of badges
-    if badge is None:
-        section_title = 'Märken för kår'
-        badges = Badge.get_badges(sgroup_key)
-        logging.info("Length of badges is %d", len(badges))
-
-        return render_template('badgelist.html',
-                            heading=section_title,
-                            baselink=baselink,
-                            badges=badges,
-                            breadcrumbs=breadcrumbs)

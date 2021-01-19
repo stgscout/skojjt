@@ -1,7 +1,8 @@
 ﻿{% extends "layout.html" %}
 {% block main %}
 <div class="table-responsive">
-    <span class="heading">{{heading}}: <input type="text" name="name" id="name"/ value="{{name}}"></span>
+    <span class="heading">{{heading}}: {% if action == "show" %} {{name}} {% else %}
+	          <input type="text" name="name" id="name"/ value="{{name}}"> {% endif %}</span>
 	<table id="maintable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
 	  <thead>
 		<tr>
@@ -36,8 +37,10 @@
 		</div>
 	</div>
 </div>
+{% if action != "show" %}
 <button id="newpart" class="btn btn-g btn-info">Ny del</button>
 <button id="save" class="btn btn-g btn-warning">Spara</button>
+{% endif %}
 <script>
 $(document).ready(function() {
 	var tbl = $('#maintable').DataTable({
@@ -92,7 +95,7 @@ $(document).ready(function() {
 		fd.append('parts', parts_str)
 		console.log(tbl.rows())
 		$.ajax({
-			url:'./savebadge',
+			url:'.',
 			data: fd,
 			processData: false,
 			contentType: false,

@@ -141,6 +141,42 @@ class TroopBadge(ndb.Model):
     idx = ndb.IntegerProperty(required=True)  # For sorting
 
     @staticmethod
-    def getBadgesForTroop(troop):
+    def get_badges_for_troop(troop):
         tps = TroopBadge.query(TroopBadge.troop_key == troop.key).order(TroopBadge.idx).fetch()
-        return [Badge.get_by_id(tp.troop_key) for tp in tps]
+        return [Badge.get_by_id(tp.badge_key.id()) for tp in tps]
+
+    @staticmethod
+    def update_for_troop(troop, name_list):
+        old_troop_badges = TroopBadge.query(TroopBadge.troop_key == troop.key).order(TroopBadge.idx).fetch() 
+        old_badges = [Badge.get_by_id(tp.badge_key.id()) for tp in old_troop_badges]
+        nr_old_troop_badges = len(old_troop_badges)
+        logging.info("New are %d, old were %d" % (len(name_list), nr_old_troop_badges))
+        # First find keys to remove
+        to_remove = []
+        for old in old_badges:
+            if old.name not in name_list:
+                to_remove.append(old.key)
+        # Next remove them from the troop badges
+        for old_key in to_remove:
+            for otb in old_troop_badges:
+                if otb.badge_key == old_key:
+                    otb.key.delete()
+        # Now find really new names
+        really_new = []
+        for name in name_list:
+            for old in old_badges:
+                if old.name == name:
+                    break
+            else:
+                really_new.append(name)
+        if len(really_new) == 0:
+            return
+        logging.info("Really new are %d" % len(really_new))
+        allbadges = Badge.get_badges(troop.scoutgroup)
+        idx = nr_old_troop_badges
+        for badge in allbadges:
+            if badge.name in really_new:
+                tb = TroopBadge(troop_key=troop.key, badge_key=badge.key, idx=idx)
+                tb.put()
+                idx += 1
+

@@ -17,6 +17,7 @@ from excelreport_sthlm import ExcelReportSthlm
 from jsonreport import JsonReport
 from data import Meeting, Person, ScoutGroup, Semester, Troop, TroopPerson, UserPrefs
 from dakdata import DakData, Deltagare, Sammankomst
+from data_badge import TroopBadge
 
 
 def semester_sort(sem_a, sem_b):
@@ -311,16 +312,21 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
         return lagerbidrag.render_lagerbidrag(request, scoutgroup, "group", user=user, sgroup_key=sgroup_key)
     elif troop is None:
         section_title = 'Avdelningar'
+        troops = sorted(Troop.getTroopsForUser(sgroup_key, user), key=attrgetter('name'))
+        troop_badges = [TroopBadge.getBadgesForTroop(troop) for troop in troops]
+        for i, tp in enumerate(troop_badges):
+            logging.info("Nr %d, len=%d" % (i, len(tp)))
         return render_template('troops.html',
                                heading=section_title,
                                baselink=baselink,
-                               scoutgroupbadgeslink='/scoutgroupbadges/' + sgroup_url + '/',
+                               scoutgroupbadgeslink='/badges/' + sgroup_url + '/',
                                scoutgroupinfolink='/scoutgroupinfo/' + sgroup_url + '/',
                                groupsummarylink='/groupsummary/' + sgroup_url + '/',
                                user=user,
                                semester=semester,
                                semesters=sorted(Semester.query(), semester_sort),
-                               troops=sorted(Troop.getTroopsForUser(sgroup_key, user), key=attrgetter('name')),
+                               troops=troops,
+                               troop_badges=troop_badges,
                                lagerplats=scoutgroup.default_lagerplats,
                                breadcrumbs=breadcrumbs)
     elif key_url is not None and key_url not in ("dak", "sensus", "lagerbidrag", "excel", "excel_sthlm", "json"):

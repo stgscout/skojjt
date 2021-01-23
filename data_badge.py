@@ -15,10 +15,10 @@ class Badge(ndb.Model):
     # TODO. Add image = ndb.BlobProperty()
 
     @staticmethod
-    def create(name, scoutgroup_key, badge_parts):
+    def create(name, scoutgroup_key, badge_parts_data):
         badge = Badge(name=name, scoutgroup=scoutgroup_key)
         badge_key = badge.put()
-        for badge_part in badge_parts:
+        for badge_part in badge_parts_data:
             bp = BadgePart(badge=badge_key,
                            idx=int(badge_part[0]),
                            short_desc=badge_part[1],
@@ -28,12 +28,12 @@ class Badge(ndb.Model):
     def get_parts(self):
         return BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
 
-    def update(self, name, badge_parts):
+    def update(self, name, badge_parts_data):
         if name != self.name:
             self.name = name
             self.put()
         prevs = BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
-        for old, new in zip(prevs, badge_parts):
+        for old, new in zip(prevs, badge_parts_data):
             if old.idx != int(new[0]):
                 logging.info("Badge part numbers don't match: %d %d" % (old.idx, int(new[0])))
                 break
@@ -41,20 +41,17 @@ class Badge(ndb.Model):
                 old.short_desc = new[1]
                 old.long_desc = new[2]
                 old.put()
-        if len(badge_parts) > len(prevs):
-            for new in badge_parts[len(prevs):]:
+        if len(badge_parts_data) > len(prevs):
+            for new in badge_parts_data[len(prevs):]:
                 bp = BadgePart(badge=self.key,
                                idx=int(new[0]),
                                short_desc=new[1],
                                long_desc=new[2])
                 bp.put()
         else:
-            for bp in prevs[len(badge_parts):]:
+            for bp in prevs[len(badge_parts_data):]:
                 bp.delete()
         # If remove, also remove all BadgePartDone
-
-
-    # get_by_id is there already
 
     @staticmethod
     def get_badges(scoutgroup_key):
@@ -71,18 +68,6 @@ class BadgePart(ndb.Model):
     idx = ndb.IntegerProperty(required=True)  # For sorting
     short_desc = ndb.StringProperty(required=True)
     long_desc = ndb.StringProperty(required=True)
-
-    @staticmethod
-    def get_or_create(badge_key, idx, short_desc, long_desc):
-        badge_part = BadgePart.get_by_id(badge_key, idx)
-        if badge_part is None:
-            badge_part = BadgePart.create(badge_key, idx, short_desc, long_desc)
-            badge_part.put()
-        if short_desc != badge_part.short_desc or long_desc != badge_part.long_desc:
-            badge_part.short_desc = short_desc
-            badge_part.long_desc = long_desc
-            badge_part.put()
-        # TODO. Check if we should cache something
 
 
 class BadgePartDone(ndb.Model):

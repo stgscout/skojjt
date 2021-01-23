@@ -313,9 +313,12 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
     elif troop is None:
         section_title = 'Avdelningar'
         troops = sorted(Troop.getTroopsForUser(sgroup_key, user), key=attrgetter('name'))
-        troop_badges = [TroopBadge.getBadgesForTroop(troop) for troop in troops]
-        for i, tp in enumerate(troop_badges):
-            logging.info("Nr %d, len=%d" % (i, len(tp)))
+        troops_badges = [TroopBadge.get_badges_for_troop(troop) for troop in troops]
+        nr_badge_cols = max(5, *[len(tb) for tb in troops_badges])
+        for i, tp in enumerate(troops_badges):
+            logging.info("Troop nr %d has %d badges" % (i, len(tp)))
+        for troop in troops:
+            logging.info("Troop %s" % troop.name)
         return render_template('troops.html',
                                heading=section_title,
                                baselink=baselink,
@@ -326,7 +329,8 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
                                semester=semester,
                                semesters=sorted(Semester.query(), semester_sort),
                                troops=troops,
-                               troop_badges=troop_badges,
+                               nr_badge_cols=nr_badge_cols,
+                               troops_badges=troops_badges,
                                lagerplats=scoutgroup.default_lagerplats,
                                breadcrumbs=breadcrumbs)
     elif key_url is not None and key_url not in ("dak", "sensus", "lagerbidrag", "excel", "excel_sthlm", "json"):

@@ -24,6 +24,7 @@ class Badge(ndb.Model):
                            short_desc=badge_part[1],
                            long_desc=badge_part[2])
             bp.put()
+        # TODO. Insert 100 and 101 for Utdelat och Registrerat
 
     def get_parts(self):
         return BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
@@ -51,7 +52,8 @@ class Badge(ndb.Model):
         else:
             for bp in prevs[len(badge_parts_data):]:
                 bp.delete()
-        # If remove, also remove all BadgePartDone
+        # TODO: If remove, also remove all BadgePartDone
+        # TODO: Handle 100 and 101 properly
 
     @staticmethod
     def get_badges(scoutgroup_key):
@@ -63,7 +65,13 @@ class Badge(ndb.Model):
 
 
 class BadgePart(ndb.Model):
-    "Märkesdel med idx för att sortera"
+    """Badge part with index idx for sorting.
+
+    There are special parts:
+         idx=100, short_desc=Utdelat
+         idx=101, short_desc=Registrerat
+    to keep track of what has been awarded and registrered.
+    """
     badge = ndb.KeyProperty(kind=Badge, required=True)
     idx = ndb.IntegerProperty(required=True)  # For sorting
     short_desc = ndb.StringProperty(required=True)
@@ -71,52 +79,25 @@ class BadgePart(ndb.Model):
 
 
 class BadgePartDone(ndb.Model):
-    "Del som är gjord inkl. datum och vem som infört i Skojjt."
+    "Part that has been done including date and who registered in Skojjt."
     badge_key = ndb.KeyProperty(kind=Badge, required=True)
     person_key = ndb.KeyProperty(kind=Person, required=True)
-    idx = ndb.IntegerProperty(required=True)
-    datetime = ndb.DateProperty(required=True)
-    examiner = Person
-
-
-class BadgeProgress(ndb.Model):
-    "Märkesprogress för en person."
-    badge_key = ndb.KeyProperty(kind=Badge)
-    person_key = ndb.KeyProperty(kind=Person)
-    registered = ndb.BooleanProperty()  # Registrerat i scoutnet
-    awarded = ndb.BooleanProperty()  # Utdelat till scouten
-    # Lista av vilka delar som är godkända inkl. datum (och ledare)
-    # This can be found by quering get_by_
-    #  with passed = ndb.KeyProperty(kind=BadgePartDone, repeated=True)
+    idx = ndb.IntegerProperty(required=True)  # idx for BadgePart
+    date = ndb.DateTimeProperty(auto_now_add=True)
+    examiner_name = ndb.StringProperty(required=True)
 
     @staticmethod
-    def getOrCreate(badge_key, person_id):
-        badge_progress = BadgeProgress.get_by_id(badge_key, person_id)
-        if badge_progress is None:
-            badge_progress = BadgeProgress.create(badge_key, person_id)
-            badge_progress.put()
-        return badge_progress
-        # TODO. Check if we should cache something
+    def create(person_key, badge_key, badge_part_idx, examiner_name):
+        bpd = BadgePartDone(person_key=person_key, badge_key=badge_key, 
+                            idx=badge_part_idx, examiner_name=examiner_name)
+        bpd.put()
 
     @staticmethod
-    def create(badge_key, person_id):
-        badge_progress = BadgeProgress(
-            badge_key=badge_key,
-            person_id=person_id,
-            registered=False,
-            awarded=False
-        )
-        return badge_progress
-
-    def get_progress(self):
-        parts_done = BadgePartDone.query(
-            BadgePartDone.Badge_key == self.badge_key,
-            BadgePartDone.person_key == self.person_id)
-        parts_idx = [p.idx for p in parts_done]
-        return {
-            'registered': parts_done.registered,
-            'awarded': parts_done.awarded,
-            'parts_done': parts_idx.sorted()}
+    def progress(person_key, badge_key):
+        "Person progress for specific badge."
+        bpd = BadgePartDone.query(ndb.AND(BadgePartDone.person_key == person_key,
+                                          BadgePartDone.badge_key == badge_key)).order(BadgePartDone.idx).fetch()
+        return bpd
 
 
 class TroopBadge(ndb.Model):
@@ -164,4 +145,3 @@ class TroopBadge(ndb.Model):
                 tb = TroopBadge(troop_key=troop.key, badge_key=badge.key, idx=idx)
                 tb.put()
                 idx += 1
-

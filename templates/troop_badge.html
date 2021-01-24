@@ -19,44 +19,72 @@
 			</a>
 		</td>
 		{% for part in badge_parts %} {# name is meeting, id is the person #}{% set ipart = loop.index0 %}
-			<td><input title="{{part.idx}}: {{person.getname()}}" class="attendance-cb checkbox big-checkbox" name="cb{{part.key.urlsafe()}}" id="{{person.key.urlsafe()}}" type="checkbox" {%if parts_progress[ipart][iperson]%}checked=""{% endif %}/></td>
+			<td><input title="{{part.short_desc}}: {{person.getname()}}" 
+                 class="attendance-cb checkbox big-checkbox" name="cbpart"
+                 id="{{person.key.urlsafe()}}:{{part.idx}}" type="checkbox"
+                 {%if parts_progress[ipart][iperson]%}checked="" disabled=""{% endif %}/></td>
 		{% endfor %}
 		</tr>
 		{% endfor %}
-		{% if badge_parts %}
-		<span class="saveinfo">&nbsp;</span></td><td class="removebutton extrainfo" style="display:none"/></td><td class="patruller extrainfo" style="display:none"></td><td class="birthday extrainfo" style="display:none"></td>
-		{% endif %}
-		{% for part in badge_parts %}
-		<td>
-			<button type="button" class="postattendance btn btn-lg" aria-label="Left Align" id="btn{{part.key.urlsafe()}}" >
-				<span id="span{{part.key.urlsafe()}}" aria-hidden="true"></span>
-			</button>
-		</td>
-		{% endfor %}
-		{% if badge_parts %}
-		</tr>
-		{% endif %}
 	  </tbody>
 	</table>
 </div>
-
+<div class="divider-vertical well">
+    <button class="btn btn-g btn-info saveinfo" id="saveall">Spara</button>
+</div>
 <script>
 $(document).ready(function() {
-	$("#chkExtrainfo").click(function(event) {
-		//var button = $(event.target);
-		var columns = ".extrainfo";
-		$(columns).toggle();
-		maintable.fnAdjustColumnSizing();
+    function compileCheckedState() {
+        // Get all checked check boxes as part_id:person_id
+        var checkboxes = $('input:checkbox[name="cbpart"]');
+        console.log(checkboxes)
+        var checkedParts = [];
+        for (var cb=0; cb < checkboxes.length; cb++)
+		{
+			if (checkboxes[cb].checked)
+			{
+                checkedParts.push(checkboxes[cb].id);
+			}
+		}
+        checkedParts.sort()
+        return checkedParts;
+    }
+
+    var initChecked = compileCheckedState();
+    console.log("There are " + initChecked.length + " checked boxes");
+    console.log(initChecked[0])
+
+
+	$("#saveall").click(function(event) {
+        var button = event.target;
+        var nowChecked = compileCheckedState();
+        var newChecks = []
+        for (var i=0; i < nowChecked.length; i++)
+		{
+            if (!initChecked.includes(nowChecked[i])) {
+                newChecks.push(nowChecked[i])
+            }
+		}
+        console.log("New: " + newChecks.length)
+        var update = newChecks.join(",")
+        var fd = new FormData();
+		fd.append('action', 'saveparts');
+		fd.append('update', update);
+		$(button).addClass('data-save-pending');
+		$.ajax({
+			url:'./',
+			data: fd,
+			processData: false,
+			contentType: false,
+			type: 'POST',
+			success: function(data) { if (data === "ok") resetDirtyButton($(button));}
+		});
 	});
-	
-	$("#newmeeting").on('shown.bs.collapse', function(){
-		$("#mname")[0].focus();
-	});
-	$('.togglebutton').click(function(event)
-	{
-		// hack because shown.bs.collapse doesn't trigger with datatable included
-		setTimeout(function() {$(event.target.attributes['set-focus'].value)[0].focus();}, 200);
-	});
+
+    function resetDirtyButton(btn) {
+		btn.removeClass('data-dirty data-save-pending');
+	}
+
 	var maintable = $('#maintable');
 		maintable.dataTable({
 		scrollX:true,
@@ -76,220 +104,8 @@ $(document).ready(function() {
 		// hack/fix for webkit to match sizes after css has been applied
 		maintable.fnAdjustColumnSizing();
 	}, 10);
-	function updateParticipantCount(meeting_url)
-	{
-		var leaders = 0;
-		var scouts = 0;
-		var name = 'cb' + meeting_url;
-		var checkboxes = $('input:checkbox[name="' + name + '"]');
-		for (var cb=0; cb < checkboxes.length; cb++)
-		{
-			if (checkboxes[cb].checked)
-			{
-				var person_id = checkboxes[cb].id;
-				var x = $('#name' + person_id)[0];
-				var dd = x.attributes['data-leader'];
-				if (dd != undefined)
-				{
-					var v=dd.value;
-					if (v == '1')
-					{
-						leaders++;
-						continue;
-					}
-				}
-				scouts++
-			}
-		}
-		$('#span' + meeting_url).html('' + scouts + '/' + leaders);
-		updateCheckAllCheckbox(meeting_url);
-	}
-	function updateAllParticipantCount()
-	{
-		var btns = $('.postattendance');
-		for (var i=0; i < btns.length; i++)
-		{
-			var meeting_url = btns[i].id.slice(3); // "btn..."
-			updateParticipantCount(meeting_url);
-		}
-	}
-	updateAllParticipantCount();
-
-	$('.attendance-cb').click(function(event) {
-		meeting_url = event.target.name.slice(2);
-		var btn = $('#btn'+meeting_url);
-		btn.addClass('data-dirty');
-		updateParticipantCount(meeting_url);
-		$(".saveinfo").html("<br/>Klicka för att spara:");
-	});
-
-	function shiftCheckBoxTitleOneDay(cbTitle)
-	{
-		var parts = cbTitle.split(":");
-		var cbDay = Date.parse(parts[0]);
-		var prevDay = cbDay - 1000 * 3600 * 24;
-		var p = new Date(prevDay);
-		var prevStr = p.toISOString().split('T')[0];
-		return prevStr + ":" + parts[1];
-	}
-
-	function updateCheckAllCheckbox(meeting_url)
-	{
-		var checkboxes = $('input:checkbox[name="cb' + meeting_url + '"]');
-		var checkedcheckboxes = $('input:checkbox[name="cb' + meeting_url + '"]:checked');
-		var toggleallcheckbox = $('input:checkbox[name="tgl' + meeting_url + '"]')[0];
-		toggleallcheckbox.checked = checkedcheckboxes.length !== 0 && checkedcheckboxes.length === checkboxes.length;
-		toggleallcheckbox.indeterminate = checkedcheckboxes.length !== 0 && checkedcheckboxes.length !== checkboxes.length;
-	}
-
-	$('.attendance-tgl').click(function(event) {
-		meeting_url = event.target.name.slice(3);
-		var btn = $('#btn'+meeting_url);
-		btn.addClass('data-dirty');
-		toggleParticipants(meeting_url, event.target.checked);
-		updateParticipantCount(meeting_url);
-		$(".saveinfo").html("<br/>Klicka för att spara:");
-	});
-
-	function resetDirtyButton(btn) {
-		btn.removeClass('data-dirty data-save-pending');
-		if (!isDirty()) { 
-			$(".saveinfo").html("");
-		}
-	}
-	$('.postattendance').click(function(event) {
-		var button = event.target;
-		if (button.type != 'button') // if you press on the glyphicon inside the button
-			button = event.target.parentNode; // get the parent button instead
-
-		var meeting_url = button.id.slice(3);
-		var checkboxes = $('input:checkbox[name="cb' + meeting_url + '"]');
-		persons = '';
-		for (var cb=0; cb < checkboxes.length; cb++)
-		{
-			if (persons.length > 0) persons += ',';
-			if (checkboxes[cb].checked)
-				persons += checkboxes[cb].id;
-		}
-		var fd = new FormData();
-		fd.append('action', 'saveattendance');
-		fd.append('persons', persons);
-		$(button).addClass('data-save-pending');
-		$.ajax({
-			url:'./'+meeting_url+"/",
-			data: fd,
-			processData: false,
-			contentType: false,
-			type: 'POST',
-			success: function(data) { if (data === "ok") resetDirtyButton($(button));}
-		});
-	});
-	var timerID = 0;
-	var delay = (function()
-	{
-		return function(callback, ms)
-		{
-			clearTimeout(timerID);
-			timerID = setTimeout(callback, ms);
-		};
-	})();
-	$('#namesearch').on('keyup', function() {
-		var val = $('#namesearch').val();
-		if (timerID != 0)
-		{
-			clearTimeout(timerID);
-			timerID = 0;
-		}
-		if (val && val.length > 1)
-		{
-			delay(makeSearchRequest(val), 750);
-		}
-		else
-		{
-			$('#tblSearchResults').remove();
-		}
-	});
-
-	// <editor-fold desc="CSV Export, csv_table_2_href.ts">
-	var base64encode = function (string) {
-		return btoa(encodeURIComponent(string)
-			.replace(/%([0-9A-F]{2})/g, function (match, p1) {
-				return String.fromCharCode(parseInt(p1, 16));
-			}));
-	};
-	var table2data = function (table_element) {
-		var data = [];
-		for (var _i = 0, _a = table_element.getElementsByTagName("tr"); _i < _a.length; _i++) {
-			var tr = _a[_i];
-			var data_row = [];
-			for (var _b = 0, _c = tr.children; _b < _c.length; _b++) {
-				var element = _c[_b];
-				var inputs = element.getElementsByTagName("input");
-				if (inputs.length > 0) {
-					var input = inputs[0];
-					if (input.type === "checkbox") {
-						if (input.checked) {
-							data_row.push("1");
-							continue;
-						}
-						data_row.push("");
-						continue;
-					}
-					data_row.push(input.value);
-					continue;
-				}
-				//data_row.push(element.innerText);
-				data_row.push(element.innerText);
-			}
-			data.push(data_row);
-		}
-		return data;
-	};
-	var data2csv = function (data, separator, surround, escape) {
-		if (surround === void 0) { surround = "\""; }
-		if (escape === void 0) { escape = "\"\""; }
-		return (surround && surround.length > 0) ?
-			data.map(function (row) { return row.map(function (cell) { return surround + ("" + cell).replace(new RegExp(surround, "g"), escape) + surround; })
-				.join(separator); })
-				.join("\n")
-			:
-			data.map(function (row) { return row.join(separator); })
-				.join("\n");
-	};
-	var csv2href = function (csv_data, mime_type) {
-		if (mime_type === void 0) { mime_type = "text/csv"; }
-		return "data:" + mime_type + ";base64," + base64encode(csv_data);
-	};
-	var csv_link = document.getElementById("csv_export");
-	csv_link.addEventListener("click", function (click_event) {
-		return csv_link.href = csv2href(data2csv(table2data(document.getElementById("maintable")), ";"));
-	});
-	// </editor-fold>
 
 });
 
-function isDirty()
-{
-	var dd = $('.data-dirty');
-	if (dd.length !== 0)
-	{
-		return true;
-	}
-	return false;
-}
-$(window).on('beforeunload', function(){
-	if (!isDirty()) {
-		return undefined;
-	}
-	var confirmationMessage = 'Du har osparade ändringar.';
-	//(e || window.event).returnValue = confirmationMessage; //Gecko + IE
-	return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
-});
-
-setInterval(function() {
-	if (isDirty()) {
-		$(".data-dirty").click();
-	}
-}, 3000);
 </script>
 {% endblock %}

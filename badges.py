@@ -15,7 +15,7 @@ import htmlform
 from data import Meeting, Person, ScoutGroup, Semester, Troop, TroopPerson, UserPrefs
 from dakdata import DakData, Deltagare, Sammankomst
 from start import semester_sort
-from data_badge import Badge, BadgePart, TroopBadge
+from data_badge import Badge, BadgePart, BadgePartDone, TroopBadge
 
 
 Krav = namedtuple("Krav", "index short long")
@@ -163,19 +163,25 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             troop_persons = TroopPerson.getTroopPersonsForTroop(troop_key)
             persons = []
             persons_dict = {}
+            persons_progess = []
             for troop_person in troop_persons:
                 person_key = troop_person.person
                 person = troop_person.person.get()
                 persons.append(person)
+                persons_progess.append(BadgePartDone.progress(person_key, badge_key))
                 persons_dict[person_key] = person
             badge_parts = badge.get_parts()
             parts_progress = []  # [part][person] boolean matrix
             for part in badge_parts:
-                person_progress = []
-                for troop_person in troop_persons:
-                    # Check if specific part is done
-                    person_progress.append(True)
-                parts_progress.append(person_progress)
+                person_done = []
+                for progress in persons_progess:
+                    for part_done in progress:
+                        if part_done.idx == part.idx:
+                            person_done.append(True)
+                            break
+                    else:  # No break
+                        person_done.append(False)
+                parts_progress.append(person_done)
             logging.info("persons = %d" % len(persons))
             logging.info("parts_progress %s" % parts_progress)
             return render_template('troop_badge.html',
@@ -188,22 +194,14 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                                    persons=persons,
                                    troop_persons=troop_persons,
                                    parts_progress=parts_progress)
-
-    """ # There must be a troop_url
-    badge = None
-    if badge_url is not None:
-        baselink += badge_url + "/"
-        badge_key = ndb.Key(urlsafe=badge_url)
-        badge = badge_key.get()
-        section_title = "Märke"
-        breadcrumbs.append({'link': baselink, 'text': badge.name})
-        badge_parts = badge.get_parts()
-        logging.info(badge_parts)
-        return render_template('badge.html',
-                               name=badge.name,
-                               heading=section_title,
-                               baselink=baselink,
-                               breadcrumbs=breadcrumbs,
-                               badge_parts=badge_parts,
-                               scoutgroup=scoutgroup)
-        # Show or edit badge further down """
+        # POST
+        logging.info("POST troop badge")
+        new_progress = request.form['update'].split(",")
+        examiner_name = UserPrefs.current().name
+        for prog in new_progress:
+            scout_url, idx = prog.split(":")
+            badge_part_idx = int(idx)
+            scout_key = ndb.Key(urlsafe=scout_url)
+            logging.info("Update: %s %s %d %s", scout_key, badge_key, badge_part_idx, examiner_name)
+            BadgePartDone.create(scout_key, badge_key, badge_part_idx, examiner_name)
+        return redirect(breadcrumbs[-2]['link'])

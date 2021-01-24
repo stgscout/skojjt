@@ -58,7 +58,6 @@ class Badge(ndb.Model):
     @staticmethod
     def get_badges(scoutgroup_key):
         badges = []
-        logging.info("GET_BADGES")
         if scoutgroup_key is not None:
             badges = Badge.query(Badge.scoutgroup == scoutgroup_key).fetch()
         return badges

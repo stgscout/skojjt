@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block main %}
+<div class="table-responsive">
+    <span class="heading">{{badge.name}}: {{person.getname()}}</span>
+	<table id="maintable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
+	  <thead>
+		<tr>
+			<th class="short_desc">Kort beskrivning</th>
+			<th class="date">Datum</th>
+			<th class="examiner">Godkänd av</th>
+		</tr>
+	  </thead>
+	  <tbody>
+		{% for part in badge_parts %}{% set idone = loop.index0 %}
+		<tr {% if done[idone].done %} class="done" {% endif %}><td>{{part.idx}}. {{part.short_desc}}</td><td>{{done[idone].date}}</td><td>{{done[idone].examiner}}</tr>
+		{% endfor %}
+	  </tbody>
+	</table>
+</div>
+<script>
+$(document).ready(function() {
+	var tbl = $('#maintable').DataTable({
+		searching:false,
+		paging:false,
+		info:false,
+		ordering:false,
+	});
+});
+</script>
+{% endblock %}

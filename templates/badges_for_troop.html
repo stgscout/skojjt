@@ -8,20 +8,12 @@
             {% for badge in badges %}
             <tr>
 			    <th><div><input value="{{badge.name}}" class="include-tgl big-checkbox" name="badgeCheck" type="checkbox"
-                                {% if badge.name in troop_badges %}checked=""{% endif %}/>
+                                {% if badge.name in troop_badge_names %}checked=""{% endif %}/>
                 <label>{{badge.name}}</label>
                 </div></th>
             </tr>
             {% endfor %}
         </table>
-        <!--<p>badges</p>
-        {% for badge in badges %}
-          <p>{{badge}}</p>
-        {% endfor %}
-        <p>troop_badges</p>
-        {% for badge in troop_badges %}
-          <p>{{badge}}</p>
-        {% endfor %} -->
     </div>
     <div class="divider-vertical well">
         <button id="save" class="btn btn-g btn-warning">Spara</button>

@@ -1,0 +1,16 @@
+{% include "header.html" %}
+<body>
+{% include "navigation.html" %}
+    <div class="main">
+        <table id="badgetable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
+            <tbody>
+            {% for badge in badges %}
+            <tr>
+                <th>{{badge.name}}</th>
+                <th><a href="{{baselink+badge.key.urlsafe()}}" class="btn btn-g btn-info">Visa</a></th>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

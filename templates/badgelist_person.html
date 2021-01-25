@@ -6,8 +6,8 @@
             <tbody>
             {% for badge in badges %}
             <tr>
-                <th>{{badge.name}}</th>
-                <th><a href="{{baselink+badge.key.urlsafe()}}" class="btn btn-g btn-info">Visa</a></th>
+                <th><a href="{{baselink+badge.key.urlsafe()}}/show/" class="btn btn-info"><span class="glyphicon glyphicon-education">{{badge.name}}</span></a></th>
+                <th><a href="{{baselink+badge.key.urlsafe()}}/change/" class="btn btn-g btn-warning">Ändra</a></th>
             </tr>
             {% endfor %}
         </table>

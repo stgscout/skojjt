@@ -15,7 +15,7 @@
 	  <tbody>
 		{% for part in badge_parts %}
 		<tr><td>{{part.idx}}</td><td>{{part.short_desc}}</td><td>{{part.long_desc}}</td>
-		{% if action != "show" %}<td><Button id="chg{{loop.index}}" class="chgpart btn btn-g btn-info">Ändra</Button></td>{% endif %}</tr>
+		{% if action != "show" %}<td><Button id="chg{{loop.index}}" class="chgpart btn btn-g btn-warning">Ändra</Button></td>{% endif %}</tr>
 		{% endfor %}
 	  </tbody>
 	</table>
@@ -40,9 +40,9 @@
 	</div>
 </div>
 {% if action != "show" %}
-<button id="newpart" class="btn btn-g btn-info">Ny del</button>
+<button id="newpart" class="btn btn-g btn-success">Ny del</button>
 <button id="save" class="btn btn-g btn-warning">Spara</button>
-<a href="{{breadcrumbs[-2]['link']}}"><button id="abort" class="btn btn-g btn-warning">Avbryt</button></href>
+<a href="{{breadcrumbs[-2]['link']}}"><button id="abort" class="btn btn-g btn-danger">Avbryt</button></href>
 {% endif %}
 <script>
 $(document).ready(function() {

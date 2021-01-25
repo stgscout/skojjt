@@ -8,23 +8,47 @@
 			<th class="short_desc">Kort beskrivning</th>
 			<th class="date">Datum</th>
 			<th class="examiner">Godkänd av</th>
+			{% if change %}<th></th> {% endif %}
 		</tr>
 	  </thead>
 	  <tbody>
 		{% for part in badge_parts %}{% set idone = loop.index0 %}
-		<tr {% if done[idone].done %} class="done" {% endif %}><td>{{part.idx}}. {{part.short_desc}}</td><td>{{done[idone].date}}</td><td>{{done[idone].examiner}}</tr>
+		<tr {% if done[idone].done %} class="done" {% endif %}><td>{{part.idx}}. {{part.short_desc}}</td><td>{{done[idone].date}}</td><td>{{done[idone].examiner}}
+		    {% if change %}
+			<td>{% if not done[idone].done %}<button class="btn btn-success approve" id="btn{{part.idx}}">Godkänn</button>{% endif %}</td></tr>
+			{% endif %}
 		{% endfor %}
 	  </tbody>
 	</table>
 </div>
 <script>
 $(document).ready(function() {
-	var tbl = $('#maintable').DataTable({
-		searching:false,
-		paging:false,
-		info:false,
-		ordering:false,
+	$('.approve').click(function(event) {
+		var button = event.target;
+		var idx = event.target.id.substring(3);
+		console.log("Approve " + idx);
+        var fd = new FormData();
+		fd.append('action', 'approve');
+		fd.append('idx', idx);
+		$(button).addClass('data-save-pending');
+		$.ajax({
+			url:'./',
+			data: fd,
+			processData: false,
+			contentType: false,
+			type: 'POST',
+			success: function(data) { if (data === "ok") {
+				resetDirtyButton($(button));
+				location.reload(); // Reload page with stored data
+				}
+			}
+		});
 	});
+
+    function resetDirtyButton(btn) {
+		btn.removeClass('data-dirty data-save-pending');
+	}
 });
+
 </script>
 {% endblock %}

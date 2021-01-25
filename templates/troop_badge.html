@@ -4,7 +4,7 @@
 	<table id="maintable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
 	  <thead>
 		<tr>
-			<th class="troopnames">{{troop.name}}<br/><span id="badgename" class="heading">{{heading}}</span></th>
+			<th class="troopnames">{{troop.name}}<br/><span class="heading">{{heading}}</span></th>
 			{% for part in badge_parts %}
 			<th class="rotate"><div id="part-{{part.idx}}">{{part.idx}}. {{part.short_desc}}<br/></div></th>
 			{% endfor %}
@@ -30,7 +30,7 @@
 	</table>
 </div>
 <div class="divider-vertical well">
-    <button class="btn btn-g btn-info saveinfo" id="saveall">Spara</button>
+    <button class="btn btn-g btn-warning saveinfo" id="saveall">Spara</button>
     <button class="btn btn-g btn-info " id="showinfo">Märkesinfo</button>
 </div>
 <!-- Full table of badge for reference. Normally hidden -->
@@ -71,12 +71,6 @@ $(document).ready(function() {
     console.log("There are " + initChecked.length + " checked boxes");
     console.log(initChecked[0])
 
-	$("#badgename").click(function(event) {
-        // Toggle description
-        console.log("Toggle badge explanation")
-        $("#badgetable").toggle()
-    });
-
 	$("#showinfo").click(function(event) {
         // Toggle description
         console.log("Toggle badge explanation via showinfo")
@@ -105,7 +99,11 @@ $(document).ready(function() {
 			processData: false,
 			contentType: false,
 			type: 'POST',
-			success: function(data) { if (data === "ok") resetDirtyButton($(button));}
+			success: function(data) { if (data === "ok") {
+				resetDirtyButton($(button));
+				location.reload(); // Reload page with stored data
+				}
+			}
 		});
 	});
 

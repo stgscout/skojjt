@@ -87,7 +87,7 @@ class BadgePartDone(ndb.Model):
 
     @staticmethod
     def create(person_key, badge_key, badge_part_idx, examiner_name):
-        bpd = BadgePartDone(person_key=person_key, badge_key=badge_key, 
+        bpd = BadgePartDone(person_key=person_key, badge_key=badge_key,
                             idx=badge_part_idx, examiner_name=examiner_name)
         bpd.put()
 

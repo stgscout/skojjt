@@ -315,10 +315,6 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
         troops = sorted(Troop.getTroopsForUser(sgroup_key, user), key=attrgetter('name'))
         troops_badges = [TroopBadge.get_badges_for_troop(troop) for troop in troops]
         nr_badge_cols = max(5, *[len(tb) for tb in troops_badges])
-        for i, tp in enumerate(troops_badges):
-            logging.info("Troop nr %d has %d badges" % (i, len(tp)))
-        for troop in troops:
-            logging.info("Troop %s" % troop.name)
         return render_template('troops.html',
                                heading=section_title,
                                baselink=baselink,

@@ -7,6 +7,8 @@ from google.appengine.ext import ndb
 
 from data import ScoutGroup, Troop, Person, PropertyWriteTracker
 
+ADMIN_OFFSET = 100  # Offset for administrative badge parts
+
 
 class Badge(ndb.Model):
     "Märkesdefinition för en scoutkår. Kraven ligger separat som BadgePart."
@@ -24,42 +26,53 @@ class Badge(ndb.Model):
                            short_desc=badge_part[1],
                            long_desc=badge_part[2])
             bp.put()
-        # TODO. Insert 100 and 101 for Utdelat och Registrerat
 
     def get_parts(self):
         return BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
 
     def update(self, name, badge_parts_data):
+        """Update badge parts for badge. Separate normal series from admin."""
         if name != self.name:
             self.name = name
             self.put()
-        prevs = BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
-        for old, new in zip(prevs, badge_parts_data):
-            if old.idx != int(new[0]):
-                logging.info("Badge part numbers don't match: %d %d" % (old.idx, int(new[0])))
-                break
-            if old.short_desc != new[1] or old.long_desc != new[2]:
-                old.short_desc = new[1]
-                old.long_desc = new[2]
-                old.put()
-        if len(badge_parts_data) > len(prevs):
-            for new in badge_parts_data[len(prevs):]:
-                bp = BadgePart(badge=self.key,
-                               idx=int(new[0]),
-                               short_desc=new[1],
-                               long_desc=new[2])
-                bp.put()
-        else:
-            for bp in prevs[len(badge_parts_data):]:
-                bp.delete()
-        # TODO: If remove, also remove all BadgePartDone
-        # TODO: Handle 100 and 101 properly
+
+        def parts_update(olds, news_data):
+            for old, new in zip(olds, news_data):
+                if old.idx != int(new[0]):
+                    logging.warn("Badge part numbers don't match: %d %d" % (old.idx, int(new[0])))
+                    return
+                if old.short_desc != new[1] or old.long_desc != new[2]:
+                    old.short_desc = new[1]
+                    old.long_desc = new[2]
+                    old.put()
+            if len(news_data) > len(olds):
+                for new in news_data[len(olds):]:
+                    bp = BadgePart(badge=self.key,
+                                   idx=int(new[0]),
+                                   short_desc=new[1],
+                                   long_desc=new[2])
+                    bp.put()
+            else:
+                for bp in olds[len(news_data):]:
+                    # TODO. Shall we support delete
+                    logging.warn("Would like to delete part %d" % bp.idx)
+                    # bp.delete()
+
+        old_parts = BadgePart.query(BadgePart.badge == self.key).order(BadgePart.idx).fetch()
+        old_normal = [p for p in old_parts if p.idx < ADMIN_OFFSET]
+        old_admin = [p for p in old_parts if p.idx >= ADMIN_OFFSET]
+
+        new_data_normal = [bp for bp in badge_parts_data if int(bp[0]) < ADMIN_OFFSET]
+        new_data_admin = [bp for bp in badge_parts_data if int(bp[0]) >= ADMIN_OFFSET]
+
+        parts_update(old_normal, new_data_normal)
+        parts_update(old_admin, new_data_admin)
 
     @staticmethod
     def get_badges(scoutgroup_key):
         badges = []
         if scoutgroup_key is not None:
-            badges = Badge.query(Badge.scoutgroup == scoutgroup_key).fetch()
+            badges = Badge.query(Badge.scoutgroup == scoutgroup_key).order(Badge.name).fetch()
         return badges
 
 
@@ -112,7 +125,7 @@ class TroopBadge(ndb.Model):
 
     @staticmethod
     def update_for_troop(troop, name_list):
-        old_troop_badges = TroopBadge.query(TroopBadge.troop_key == troop.key).order(TroopBadge.idx).fetch() 
+        old_troop_badges = TroopBadge.query(TroopBadge.troop_key == troop.key).order(TroopBadge.idx).fetch()
         old_badges = [Badge.get_by_id(tp.badge_key.id()) for tp in old_troop_badges]
         nr_old_troop_badges = len(old_troop_badges)
         logging.info("New are %d, old were %d" % (len(name_list), nr_old_troop_badges))

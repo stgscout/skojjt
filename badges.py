@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
 """Märkesdefinitioner inkl delmoment med kort och lång beskrivning."""
 
-import urllib
 import logging
-import datetime
-from operator import attrgetter
 from collections import namedtuple
-from flask import Blueprint, make_response, render_template, request
+from flask import Blueprint, render_template, request
 
 
-from google.appengine.ext import ndb # pylint: disable=import-error
+from google.appengine.ext import ndb  # pylint: disable=import-error
 
-import htmlform
-from data import Meeting, Person, ScoutGroup, Semester, Troop, TroopPerson, UserPrefs
-from dakdata import DakData, Deltagare, Sammankomst
-from start import semester_sort
-from data_badge import Badge, BadgePart, BadgePartDone, TroopBadge
+from data import ScoutGroup, TroopPerson, UserPrefs
+from data_badge import Badge, BadgePartDone, TroopBadge, ADMIN_OFFSET
 
 badges = Blueprint('badges_page', __name__, template_folder='templates')  # pylint : disable=invalid-name
+
 
 @badges.route('/')
 @badges.route('/<sgroup_url>/')
@@ -27,7 +22,7 @@ badges = Blueprint('badges_page', __name__, template_folder='templates')  # pyli
 @badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>/', methods=['POST', 'GET'])
 @badges.route('/<sgroup_url>/person/<person_url>/')  # List of badges for a person
 @badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions: show, change
+@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions:show/change
 def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, action=None):
     logging.info("badges.py: sgroup_url=%s, badge_url=%s, troop_url=%s, person_url=%s, action=%s",
                  sgroup_url, badge_url, troop_url, person_url, action)
@@ -58,19 +53,16 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
 
     if troop_url is None and person_url is None:  # scoutgroup level
         if badge_url is None:
-            logging.info("Render list of all badges")
+            logging.info("Render list of all badges for scout_group")
             section_title = 'Märken för kår'
             badges = Badge.get_badges(sgroup_key)
-            logging.info("Length of badges is %d", len(badges))
 
             return render_template('badgelist.html',
-                                    heading=section_title,
-                                    baselink=baselink,
-                                    badges=badges,
-                                    breadcrumbs=breadcrumbs)
-
-        logging.info("Render badge")
-        logging.info("badge_url=%s, action=%s", badge_url, action)
+                                   heading=section_title,
+                                   baselink=baselink,
+                                   badges=badges,
+                                   breadcrumbs=breadcrumbs)
+        # Specfic badge or new badge
         if request.method == "GET":
             if badge_url == "newbadge":  # Get form for or create new
                 section_title = "Nytt märke"
@@ -83,8 +75,8 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                 badge = badge_key.get()
                 name = badge.name
                 badge_parts = badge.get_parts()
-                badge_parts_nonadmin = [bp for bp in badge_parts if bp.idx < 100]
-                badge_parts_admin = [bp for bp in badge_parts if bp.idx >= 100]
+                badge_parts_nonadmin = [bp for bp in badge_parts if bp.idx < ADMIN_OFFSET]
+                badge_parts_admin = [bp for bp in badge_parts if bp.idx >= ADMIN_OFFSET]
 
             baselink += 'badge/' + badge_url + "/"
             if action is not None:
@@ -158,7 +150,7 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             logging.info("POST %s %s" % (troop.name, badge.name))
             update = request.form['update']
             if update == "":
-                return "ok"  # Return ok to Ajax call 
+                return "ok"  # Return ok to Ajax call
             new_progress = update.split(",")
             examiner_name = UserPrefs.current().name
             logging.info("new_progress %s" % new_progress)

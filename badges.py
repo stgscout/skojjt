@@ -20,19 +20,14 @@ from data_badge import Badge, BadgePart, BadgePartDone, TroopBadge
 badges = Blueprint('badges_page', __name__, template_folder='templates')  # pylint : disable=invalid-name
 
 @badges.route('/')
-@badges.route('/<sgroup_url>')  # List of badges for a scout group
 @badges.route('/<sgroup_url>/')
-@badges.route('/<sgroup_url>/badge/<badge_url>', methods=['POST', 'GET'])  # A specific badge, post with newbadge
 @badges.route('/<sgroup_url>/badge/<badge_url>/', methods=['POST', 'GET'])  # A specific badge, post with newbadge
-@badges.route('/<sgroup_url>/badge/<badge_url>/<action>', methods=['POST', 'GET'])  # A specific badge, post with newbadge
-@badges.route('/<sgroup_url>/badge/<badge_url>/<action>/', methods=['POST', 'GET'])  # A specific badge, post with newbadge
-@badges.route('/<sgroup_url>/troop/<troop_url>', methods=['POST', 'GET'])  # List of badges for a troop
+@badges.route('/<sgroup_url>/badge/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions: show, change
 @badges.route('/<sgroup_url>/troop/<troop_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>', methods=['POST', 'GET'])  # Status/Update
 @badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>/', methods=['POST', 'GET'])
 @badges.route('/<sgroup_url>/person/<person_url>/')  # List of badges for a person
 @badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/', methods=['POST', 'GET'])
-@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/<action>/', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions: show, change
 def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, action=None):
     logging.info("badges.py: sgroup_url=%s, badge_url=%s, troop_url=%s, person_url=%s, action=%s",
                  sgroup_url, badge_url, troop_url, person_url, action)
@@ -80,13 +75,16 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             if badge_url == "newbadge":  # Get form for or create new
                 section_title = "Nytt märke"
                 name = "Nytt"
-                badge_parts = []
+                badge_parts_nonadmin = []
+                badge_parts_admin = []
             else:
                 section_title = "Märke"
                 badge_key = ndb.Key(urlsafe=badge_url)
                 badge = badge_key.get()
                 name = badge.name
                 badge_parts = badge.get_parts()
+                badge_parts_nonadmin = [bp for bp in badge_parts if bp.idx < 100]
+                badge_parts_admin = [bp for bp in badge_parts if bp.idx >= 100]
 
             baselink += 'badge/' + badge_url + "/"
             if action is not None:
@@ -98,13 +96,13 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                                    heading=section_title,
                                    baselink=baselink,
                                    breadcrumbs=breadcrumbs,
-                                   badge_parts=badge_parts,
+                                   badge_parts_nonadmin=badge_parts_nonadmin,
+                                   badge_parts_admin=badge_parts_admin,
                                    action=action,
                                    scoutgroup=scoutgroup)
         if request.method == "POST":
             name = request.form['name']
             part_strs = request.form['parts'].split("::")
-            # TODO. Check possible utf-8/unicode problem here
             parts = [p.split("|") for p in part_strs]
             logging.info("name: %s, parts: %s", name, parts)
             if badge_url == "newbadge":

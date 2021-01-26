@@ -224,6 +224,7 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             badges.sort(key=lambda x: x.name)
 
             return render_template('badgelist_person.html',
+                                   heading="Märken för %s" % person.getname(),
                                    baselink=baselink,
                                    breadcrumbs=breadcrumbs,
                                    badges=badges,

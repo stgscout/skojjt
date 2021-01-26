@@ -121,7 +121,8 @@ def show(sgroup_url=None, troop_url=None, key_url=None):
                                    baselink=baselink,
                                    breadcrumbs=breadcrumbs,
                                    troop_persons=[],
-                                   scoutgroup=scoutgroup)
+                                   scoutgroup=scoutgroup,
+                                   badge_url="")
         elif request.method == "POST":
             pnr = request.form['personnummer'].replace('-', '')
             person = Person.createlocal(

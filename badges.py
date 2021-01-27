@@ -20,6 +20,7 @@ badges = Blueprint('badges_page', __name__, template_folder='templates')  # pyli
 @badges.route('/<sgroup_url>/badge/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions: show, change
 @badges.route('/<sgroup_url>/troop/<troop_url>/', methods=['POST', 'GET'])
 @badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>/', methods=['POST', 'GET'])
+@badges.route('/<sgroup_url>/troop/<troop_url>/<badge_url>/<person_url>/', methods=['POST', 'GET'])
 @badges.route('/<sgroup_url>/person/<person_url>/')  # List of badges for a person
 @badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/', methods=['POST', 'GET'])
 @badges.route('/<sgroup_url>/person/<person_url>/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions:show/change
@@ -147,6 +148,8 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
         badge_key = ndb.Key(urlsafe=badge_url)
         badge = badge_key.get()
         if request.method == "POST":
+            if person_url is not None:
+                return render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs, True)
             logging.info("POST %s %s" % (troop.name, badge.name))
             update = request.form['update']
             if update == "":
@@ -169,43 +172,13 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                 bc['text'] = bc['text'].replace('Märken', 'Kårer')
             baselink += "troop/" + troop_url + "/" + badge_url + "/"
             breadcrumbs.append({'link': baselink, 'text': "%s %s" % (troop.name, badge.name)})
-            personbaselink = '/badges/' + sgroup_url + '/person/'
-            section_title = "%s för %s" % (badge.name, troop.name)
-            troop_persons = TroopPerson.getTroopPersonsForTroop(troop_key)
-            # Remove leaders since they are not candidates for badges
-            troop_persons = [tp for tp in troop_persons if not tp.leader]
-            persons = []
-            persons_dict = {}
-            persons_progess = []
-            for troop_person in troop_persons:
-                person_key = troop_person.person
-                person = troop_person.person.get()
-                persons.append(person)
-                persons_progess.append(BadgePartDone.progress(person_key, badge_key))
-                persons_dict[person_key] = person
-            badge_parts = badge.get_parts()
-            parts_progress = []  # [part][person] boolean matrix
-            for part in badge_parts:
-                person_done = []
-                for progress in persons_progess:
-                    for part_done in progress:
-                        if part_done.idx == part.idx:
-                            person_done.append(True)
-                            break
-                    else:  # No break
-                        person_done.append(False)
-                parts_progress.append(person_done)
-            return render_template('badge_troop.html',
-                                   heading=badge.name,
-                                   baselink=baselink,
-                                   personbaselink=personbaselink,
-                                   breadcrumbs=breadcrumbs,
-                                   troop=troop,
-                                   badge=badge,
-                                   badge_parts=badge_parts,
-                                   persons=persons,
-                                   troop_persons=troop_persons,
-                                   parts_progress=parts_progress)
+            if person_url is not None:
+                baselink += person_url + '/'
+                person_key = ndb.Key(urlsafe=person_url)
+                person = person_key.get()
+                breadcrumbs.append({'link': baselink, 'text': person.getname()})
+                return render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs, True)
+            return render_badge_for_troop(sgroup_url, badge_key, badge, troop_key, troop, baselink, breadcrumbs)
 
     if person_url is not None:
         person_key = ndb.Key(urlsafe=person_url)
@@ -232,45 +205,91 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
         # badge_url is not none
 
     if person_url is not None and badge_url is not None:
-        person_key = ndb.Key(urlsafe=person_url)
+        canedit = action == 'change'
+        baselink += badge_url + "/"
         badge_key = ndb.Key(urlsafe=badge_url)
         badge = badge_key.get()
-        if request.method == "POST":
-            idx = int(request.form['idx'])
-            examiner_name = UserPrefs.current().name
-            logging.info("Setting badge %s idx %s for %s" % (badge.name, idx, person.getname()))
-            BadgePartDone.create(person_key, badge_key, idx, examiner_name)
-            return "ok"
-
-        logging.info("Badge %s for %s" % (badge.name, person.getname()))
-        baselink += badge_url + "/"
         breadcrumbs.append({'link': baselink, 'text': "%s" % badge.name})
-        badge_parts = badge.get_parts()
-        parts_done = BadgePartDone.progress(person_key, badge_key)
-        d_pos = 0
-        done = []
-        Done = namedtuple('Done', 'idx date examiner done')
-        for bp in badge_parts:
-            if d_pos >= len(parts_done):
-                done.append(Done(bp.idx, "- - -", "- - -", False))
-                continue
-            pd = parts_done[d_pos]
-            if pd.idx == bp.idx:
-                done.append(Done(pd.idx, pd.date.strftime("%Y-%m-%d"), pd.examiner_name, True))
-                d_pos += 1
-            else:
-                done.append(Done(bp.idx, "- - -", "- - -", False))
-
-        logging.info("DONE: %s" % done)
-
-        return render_template('badgeparts_person.html',
-                               person=person,
-                               baselink=baselink,
-                               breadcrumbs=breadcrumbs,
-                               badge=badge,
-                               badge_parts=badge_parts,
-                               done=done,
-                               change=(action == "change"))
+        return render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs, canedit)
 
     # note that we set the 404 status explicitly
     return "Page not found", 404
+
+
+def render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs, canedit):
+    person_key = ndb.Key(urlsafe=person_url)
+    person = person_key.get()
+    badge_key = ndb.Key(urlsafe=badge_url)
+    badge = badge_key.get()
+    if request.method == "POST":
+        idx = int(request.form['idx'])
+        examiner_name = UserPrefs.current().name
+        logging.info("Setting badge %s idx %s for %s" % (badge.name, idx, person.getname()))
+        BadgePartDone.create(person_key, badge_key, idx, examiner_name)
+        return "ok"
+
+    logging.info("Badge %s for %s" % (badge.name, person.getname()))
+    badge_parts = badge.get_parts()
+    parts_done = BadgePartDone.progress(person_key, badge_key)
+    d_pos = 0
+    done = []
+    Done = namedtuple('Done', 'idx date examiner done')
+    for bp in badge_parts:
+        if d_pos >= len(parts_done):
+            done.append(Done(bp.idx, "- - -", "- - -", False))
+            continue
+        pd = parts_done[d_pos]
+        if pd.idx == bp.idx:
+            done.append(Done(pd.idx, pd.date.strftime("%Y-%m-%d"), pd.examiner_name, True))
+            d_pos += 1
+        else:
+            done.append(Done(bp.idx, "- - -", "- - -", False))
+
+    logging.info("DONE: %s" % done)
+
+    return render_template('badgeparts_person.html',
+                           person=person,
+                           baselink=baselink,
+                           breadcrumbs=breadcrumbs,
+                           badge=badge,
+                           badge_parts=badge_parts,
+                           done=done,
+                           change=canedit)
+
+
+def render_badge_for_troop(sgroup_url, badge_key, badge, troop_key, troop, baselink, breadcrumbs):
+    # section_title = "%s för %s" % (badge.name, troop.name)  # TODO. Check if needed
+    troop_persons = TroopPerson.getTroopPersonsForTroop(troop_key)
+    # Remove leaders since they are not candidates for badges
+    troop_persons = [tp for tp in troop_persons if not tp.leader]
+    persons = []
+    persons_dict = {}
+    persons_progess = []
+    for troop_person in troop_persons:
+        person_key = troop_person.person
+        person = troop_person.person.get()
+        persons.append(person)
+        persons_progess.append(BadgePartDone.progress(person_key, badge_key))
+        persons_dict[person_key] = person
+    badge_parts = badge.get_parts()
+    parts_progress = []  # [part][person] boolean matrix
+    for part in badge_parts:
+        person_done = []
+        for progress in persons_progess:
+            for part_done in progress:
+                if part_done.idx == part.idx:
+                    person_done.append(True)
+                    break
+            else:  # No break
+                person_done.append(False)
+        parts_progress.append(person_done)
+    return render_template('badge_troop.html',
+                           heading=badge.name,
+                           baselink=baselink,
+                           breadcrumbs=breadcrumbs,
+                           troop=troop,
+                           badge=badge,
+                           badge_parts=badge_parts,
+                           persons=persons,
+                           troop_persons=troop_persons,
+                           parts_progress=parts_progress)

@@ -11,7 +11,7 @@ ADMIN_OFFSET = 100  # Offset for administrative badge parts
 
 
 class Badge(ndb.Model):
-    "Märkesdefinition för en scoutkår. Kraven ligger separat som BadgePart."
+    "Badge definition for a scout group (scoutkår). The required parts are separate as BadgePart."
     name = ndb.StringProperty(required=True)
     scoutgroup = ndb.KeyProperty(kind=ScoutGroup, required=True)
     # TODO. Add image = ndb.BlobProperty()
@@ -113,7 +113,7 @@ class BadgePartDone(ndb.Model):
 
 
 class TroopBadge(ndb.Model):
-    "Märke för avdelning och termin."
+    "Badge for troop (avdelning + termin)"
     troop_key = ndb.KeyProperty(kind=Troop)
     badge_key = ndb.KeyProperty(kind=Badge)
     idx = ndb.IntegerProperty(required=True)  # For sorting

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Märkesdefinitioner inkl delmoment med kort och lång beskrivning."""
+"""Badge definitions including parts with short and long descriptions."""
 
 import logging
 from collections import namedtuple
@@ -96,7 +96,7 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             name = request.form['name']
             part_strs = request.form['parts'].split("::")
             parts = [p.split("|") for p in part_strs]
-            logging.info("name: %s, parts: %s", name, parts)
+            # logging.info("name: %s, parts: %s", name, parts)
             if badge_url == "newbadge":
                 badge = Badge.create(name, sgroup_key, parts)
                 return "ok"
@@ -125,7 +125,7 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             section_title = "Märken för %s %s" % (troop.name, semester_name)
             breadcrumbs.append({'link': baselink, 'text': "Märken %s" % troop.name})
             troop_badges = TroopBadge.get_badges_for_troop(troop)
-            logging.info("Nr troop_badges is %d" % len(troop_badges))
+            # logging.info("Nr troop_badges is %d" % len(troop_badges))
             troop_badge_names = [tb.name for tb in troop_badges]
             return render_template('badges_for_troop.html',
                                    name=troop.name,
@@ -195,7 +195,7 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                     else:  # No break
                         person_done.append(False)
                 parts_progress.append(person_done)
-            return render_template('troop_badge.html',
+            return render_template('badge_troop.html',
                                    heading=badge.name,
                                    baselink=baselink,
                                    personbaselink=personbaselink,

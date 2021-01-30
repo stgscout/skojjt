@@ -222,10 +222,13 @@ def render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs,
     badge_key = ndb.Key(urlsafe=badge_url)
     badge = badge_key.get()
     if request.method == "POST":
-        idx = int(request.form['idx'])
+        update = request.form['update']
+        logging.info("update: %s" % update)
+        indices = [int(idx) for idx in update.split(",")]
         examiner_name = UserPrefs.current().name
-        logging.info("Setting badge %s idx %s for %s" % (badge.name, idx, person.getname()))
-        BadgePartDone.create(person_key, badge_key, idx, examiner_name)
+        for idx in indices:
+            logging.info("Setting badge %s idx %s for %s" % (badge.name, idx, person.getname()))
+            BadgePartDone.create(person_key, badge_key, idx, examiner_name)
         return "ok"
 
     logging.info("Badge %s for %s" % (badge.name, person.getname()))

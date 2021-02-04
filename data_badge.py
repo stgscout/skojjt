@@ -14,7 +14,7 @@ ADMIN_OFFSET = 100  # Offset for administrative badge parts
 
 class BadgeImage(ndb.Model):
     "Image/thumbnail for a badge. Stored as data URL."
-    image = ndb.TextProperty(required=True)
+    image = ndb.TextProperty(required=True)  # TODO. Use BlobProperty to save space (get rid of unicode)
     name = ndb.StringProperty()  # Name of badge
 
 
@@ -179,13 +179,13 @@ class TroopBadge(ndb.Model):
     def get_badges_for_troop(troop):
         tps = TroopBadge.query(TroopBadge.troop_key == troop.key).fetch()
         badges = [Badge.get_by_id(tp.badge_key.id()) for tp in tps]
-        return sorted(badges, lambda x: x.name)
+        return sorted(badges, key=lambda x: x.name)
 
     @staticmethod
     def update_for_troop(troop, name_list):
         old_troop_badge_ids = TroopBadge.query(TroopBadge.troop_key == troop.key).fetch()
         old_troop_badges = [Badge.get_by_id(tp.badge_key.id()) for tp in old_troop_badge_ids]
-        old_troop_badges = sorted(old_troop_badges, lambda x: x.name)
+        old_troop_badges = sorted(old_troop_badges, key=lambda x: x.name)
         nr_old_troop_badges = len(old_troop_badges)
         logging.info("New are %d, old were %d" % (len(name_list), nr_old_troop_badges))
         # First find keys to remove

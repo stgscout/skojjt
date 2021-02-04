@@ -110,7 +110,6 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
                     badge_image = badge.image_key.get()
                     logging.info("BadgeImage %s" % badge_image.name)
                     img_src = badge_image.image
-            logging.info("img_src=%s" % img_src)
             return render_template('badge.html',
                                    name=name,
                                    heading=section_title,

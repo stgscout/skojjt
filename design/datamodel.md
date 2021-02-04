@@ -16,9 +16,12 @@ Till detta kommer nya klasser för Märken (Badges).
 Specas i data_badge.py
 
 * Badge = Märke. Kårspecifikt märke/certifikat.
-  KeyProperty: ScoutGroup.
+  KeyProperties: ScoutGroup, BadgeImage
   Andra: namn, description, parts_scout_short, parts_scout_long, parts_admin_short, parts_admin_long
-  De semare är för olika delar och är korta och långa beskrivningar.
+  De senare är för olika delar och är korta och långa beskrivningar.
+* BadgeImage - ikon för ett märke.
+  Properties: image - En liten (64x64pixel) bild lagras soma data URL i en TextProperty
+  Property: name - namn på Badge
 * BadgePartDone - detaljer av godkänd del.
   KeyProperties: Person, Badge
   Andra properties: idx, date, examiner

@@ -10,7 +10,7 @@
 	<table id="maintable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
 	  <thead>
 		<tr>
-			<th class="part_id">Del<br/></th>
+			<th class="part_id">Del</th>
 			<th class="short_desc">Kort beskrivning</th>
 			<th class="long_desc">Lång beskrivning</th>
 		    {% if action != "show" %}<th></th>{% endif %}
@@ -44,11 +44,11 @@
 	</div>
 </div>
 <div class="table-responsive">
-    <span Administrativa delar</span>
+
 	<table id="admintable" class="table table-striped display nowrap" style="position: relative; z-index: 0;">
 	  <thead>
 		<tr>
-			<th class="part_id">Adm. del<br/></th>
+			<th class="part_id">Admin</th>
 			<th class="short_desc">Kort beskrivning</th>
 			<th class="long_desc">Lång beskrivning</th>
 		    {% if action != "show" %}<th></th>{% endif %}
@@ -81,6 +81,7 @@
 		</div>
 	</div>
 </div>
+{% if action != "show" %}
 <div class="image-file ">
     <span>Bild (64x64pixels)</span>
 	<input type="file" class="image-file-input" name="thumbnail" id="thumbnail" accept=".jpg,.png" value="Välj ny ikon">
@@ -89,7 +90,7 @@
 	<span>Mall</span>
 	<input type="file" class="template-file-input" id="json-template" accept=".json" value="Läs mall">
 </div>
-{% if action != "show" %}
+
 <button id="newpart" class="btn btn-g btn-success">Ny del</button>
 <button id="newpartadm-btn" class="btn btn-g btn-success">Ny adm. del</button>
 <button id="save" class="btn btn-g btn-warning">Spara</button>
@@ -160,8 +161,7 @@ $(document).ready(function() {
 		$('#newpartadm_data').show();
 	});
 	$("#newpartadm-btn").click(function(event) {
-		var new_nr = admtbl.rows().count() + 101;
-		console.log("NEW PART ADMIN ", new_nr);
+		var new_nr = admtbl.rows().count() + 1;
 		$('#newpartadm_nr').text(new_nr);
 		$('#newpartadm_short').val("");
 		$('#newpartadm_long').val("");

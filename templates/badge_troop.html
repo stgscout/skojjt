@@ -18,7 +18,7 @@
 		</td>
 		{% for part in badge_parts_scout %} {# name is meeting, id is the person #}{% set ipart = loop.index0 %}
 			<td><input title="{{part[0]}}: {{person.getname()}}"
-                 class="attendance-cb checkbox big-checkbox" name="cbpart"
+                 class="attendance-cb checkbox big-checkbox" name="cbpart_scout"
                  id="{{person.key.urlsafe()}}:{{loop.index0}}" type="checkbox"
                  {%if progress_scout_parts[ipart][iperson]%}checked="" disabled=""{% endif %}/></td>
 		{% endfor %}
@@ -38,10 +38,10 @@
 	  </thead>
 	  <tbody>
 		{% for part in badge_parts_scout %}
-		<tr><td>{{loop.index}}. {{part[0]}}</td><td>{{part[1]}}</td></tr>
+		<tr><td>S{{loop.index}}. {{part[0]}}</td><td>{{part[1]}}</td></tr>
 		{% endfor %}
 		{% for part in badge_parts_admin %}
-		<tr><td>{{loop.index+ADMIN_OFFSET}}. {{part[0]}}</td><td>{{part[1]}}</td></tr>
+		<tr><td>A{{loop.index}}. {{part[0]}}</td><td>{{part[1]}}</td></tr>
 		{% endfor %}
 	  </tbody>
 	</table>
@@ -64,8 +64,8 @@
 		</td>
 		{% for part in badge_parts_admin %} {# name is meeting, id is the person #}{% set ipart = loop.index0 %}
 			<td><input title="{{part[0]}}: {{person.getname()}}"
-                 class="attendance-cb checkbox big-checkbox" name="cbpart"
-                 id="{{person.key.urlsafe()}}:{{loop.index0+ADMIN_OFFSET}}" type="checkbox"
+                 class="attendance-cb checkbox big-checkbox" name="cbpart_admin"
+                 id="{{person.key.urlsafe()}}:{{loop.index0}}" type="checkbox"
                  {%if progress_admin_parts[ipart][iperson]%}checked="" disabled=""{% endif %}/></td>
 		{% endfor %}
 		</tr>
@@ -92,7 +92,7 @@
 	</table>
 </div>
 <div class="divider-vertical well">
-    <button class="btn btn-g btn-warning saveinfo" id="saveall">Spara</button>
+    <button class="btn btn-g btn-warning" id="saveall">Spara</button>
     <button class="btn btn-g btn-info " id="showinfo">Märkesinfo</button>
 </div>
 
@@ -135,13 +135,18 @@ $(document).ready(function() {
 		admtable.fnAdjustColumnSizing();
 	}, 10);
 
-    var initChecked = compileCheckedState();
-    console.log("There are " + initChecked.length + " checked boxes");
-    console.log(initChecked[0])
+	var initChecked = [];
+    initChecked["scout"] = compileCheckedState("scout");
+	initChecked["admin"] = compileCheckedState("admin");
 
-    function compileCheckedState() {
+    function compileCheckedState(part_type) {
         // Get all checked check boxes as part_id:person_id
-        var checkboxes = $('input:checkbox[name="cbpart"]');
+		var checkboxes
+		if (part_type == "scout") {
+        	checkboxes = $('input:checkbox[name="cbpart_scout"]');
+		} else {
+			checkboxes = $('input:checkbox[name="cbpart_admin"]');
+		}
         var checkedParts = [];
         for (var cb=0; cb < checkboxes.length; cb++)
 		{
@@ -154,39 +159,32 @@ $(document).ready(function() {
         return checkedParts;
     }
 
+	function newChecks(part_type) {
+		var nowChecked = compileCheckedState(part_type);
+		var newChecks = [];
+		for (var i=0; i < nowChecked.length; i++)
+		{
+            if (!initChecked[part_type].includes(nowChecked[i])) {
+                newChecks.push(nowChecked[i]);
+            }
+		}
+		return newChecks;
+	}
+
     function disableCheckedChecks() {
         // Disable all checked check boxes
-        var checkboxes = $('input:checkbox[name="cbpart"]');
-        for (var cb=0; cb < checkboxes.length; cb++)
-		{
-			if (checkboxes[cb].checked)
+		var disable = function(cb_list) {
+			for (var cb=0; cb < cb_list.length; cb++)
 			{
-                checkboxes[cb].disabled=true;
+				if (cb_list[cb].checked)
+				{
+					cb_list[cb].disabled=true;
+				}
 			}
 		}
+		disable($('input:checkbox[name="cbpart_scout"]'));
+		disable($('input:checkbox[name="cbpart_admin"]'));
     }
-
-	function showProgress(checkedParts) {
-		var persons = {};
-        for (var i=0; i < checkedParts.length; i++) {
-			var parts = checkedParts[i].split(":");
-			var person = parts[0];
-			var idx = parseInt(parts[1]);
-			if (!(person in persons)) {
-				persons[person] = [0, 0]
-			}
-			if (idx < {{ADMIN_OFFSET}}) {
-				persons[person][0] += 1
-			} else {
-				persons[person][1] += 1
-			}
-		}
-		for (const p in persons) {
-			var value = persons[p]
-			//console.log('status'+p + " "  + value)
-			$('#status'+p).text(value)
-		}
-	}
 
 	$("#showinfo").click(function(event) {
         // Toggle description
@@ -196,19 +194,14 @@ $(document).ready(function() {
 
 	$("#saveall").click(function(event) {
         var button = event.target;
-        var nowChecked = compileCheckedState();
-        var newChecks = []
-        for (var i=0; i < nowChecked.length; i++)
-		{
-            if (!initChecked.includes(nowChecked[i])) {
-                newChecks.push(nowChecked[i])
-            }
-		}
-        console.log("New: " + newChecks.length)
-        var update = newChecks.join(",")
+		var newChecksScout = newChecks("scout");
+		var newChecksAdmin = newChecks("admin");
+        var update_scout = newChecksScout.join(",")
+		var update_admin = newChecksAdmin.join(",")
         var fd = new FormData();
 		fd.append('action', 'saveparts');
-		fd.append('update', update);
+		fd.append('update_scout', update_scout);
+		fd.append('update_admin', update_admin);
 		console.log("updateBeforePost: " + $(button).attr('class'))
 		$(button).addClass('data-save-pending');
 		$.ajax({
@@ -228,11 +221,10 @@ $(document).ready(function() {
 		console.log("updateAfterPost: " + btn.attr('class'))
 		resetDirtyButton(btn);
 		console.log("updateAfterPost2: " + btn.attr('class'))
-		var checked= compileCheckedState();
-		showProgress(checked)
-		disableCheckedChecks()
-		console.log("Done refreshing")
-		initChecked = compileCheckedState();  // To avoid double save
+		disableCheckedChecks();
+		console.log("Done refreshing");
+		initChecked['scout'] = compileCheckedState('scout');  // To avoid double save
+		initChecked['admin'] = compileCheckedState('admin');  // To avoid double save
 		// disable all checked boxed and update the  figures
 	}
 

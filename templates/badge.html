@@ -83,11 +83,11 @@
 </div>
 {% if action != "show" %}
 <div class="image-file ">
-    <span>Bild (64x64pixels)</span>
+    <span>Bild (48x48 pixels)</span>
 	<input type="file" class="image-file-input" name="thumbnail" id="thumbnail" accept=".jpg,.png" value="Välj ny ikon">
 </div>
 <div class="template-file ">
-	<span>Mall</span>
+	<span>Mall i JSON-format</span>
 	<input type="file" class="template-file-input" id="json-template" accept=".json" value="Läs mall">
 </div>
 
@@ -98,7 +98,8 @@
 {% endif %}
 <script>
 $(document).ready(function() {
-	var thumbnail="";
+	var other_badge_names="{{other_badge_names}}".split(",");
+	var img_data='';
 	var tbl = $('#maintable').DataTable({
 		searching:false,
 		paging:false,
@@ -199,6 +200,10 @@ $(document).ready(function() {
 		saveOngoing($(button));
 		// Gather data and fill in a form to submit
 		var name = $('#name').val();
+		if (other_badge_names.includes(name)) {
+			alert("Namnet " + name + " används redan. Kan ej spara!");
+			return;
+		}
 		var description = $('#description').val();
 		var parts_scout = ''
 		tbl.rows().every( function () {
@@ -219,7 +224,7 @@ $(document).ready(function() {
 		fd.append('description', description)
 		fd.append('parts_scout', parts_scout)
 		fd.append('parts_admin', parts_admin)
-		fd.append('thumbnail', thumbnail)
+		fd.append('img_data', img_data)
 		console.log(tbl.rows())
 		$.ajax({
 			url:'.',
@@ -229,7 +234,9 @@ $(document).ready(function() {
 			type: 'POST',
 			success: function(data) {
 				if (data === "ok") {
+					other_badge_names.push(name)
 					resetDirtyButton($(button));
+					alert("Märket " + name + " sparat")
 				}
 			}
 		});
@@ -256,8 +263,12 @@ $(document).ready(function() {
     	var reader = new FileReader();
     	reader.readAsDataURL(file[0]);
     	reader.addEventListener("load", function(e) {
-    		thumbnail = e.target.result;
-			$('#thumbimg').attr('src', thumbnail);
+    		img_data = e.target.result;
+			if (img_data.length > 10*1024) {
+				alert("Image too big. Maximum size is 10kB. Scale image to 48x48 pixels.");
+				return;
+			}
+			$('#thumbimg').attr('src', img_data);
 		});
 	});
 	$('#json-template').on('change', function() {

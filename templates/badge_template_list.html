@@ -10,7 +10,8 @@
             <tbody>
             {% for badge in badges %}
             <tr>
-                <th><img id="thumbimg" width="32px" height="32px" src="{{badge.image_key.get().image}}"/>{{badge.name}}</th>
+                <th><img id="thumbimg" width="32px" height="32px"
+                     src="{{badge_images[loop.index0]}}"/>{{badge.name}}</th>
                 <th><a href="{{baselink+badge.key.urlsafe()}}/show" class="btn btn-g btn-info">Visa</a></th>
                 <th><a href="{{baselink+badge.key.urlsafe()}}/change" class="btn btn-g btn-warning">Ändra</a></th>
                 <!--th><a href="{{baselink+'badge/'+badge.key.urlsafe()}}/remove" class="btn btn-g btn-info">Ta bort</a></th-->

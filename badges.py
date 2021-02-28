@@ -448,11 +448,15 @@ def show_template(badge_url=None, action=None, sgroup_url=None):
         # logging.info("Render list of all badges for scout_group")
         section_title = 'Märkesmallar'
         templates = BadgeTemplate.get_templates()
+        badge_images = []
+        for t in templates:
+            badge_images.append(t.image_key.get().image if t.image_key else "")
         if sgroup_url is None:
             return render_template('badge_template_list.html',
                                    heading=section_title,
                                    baselink=baselink,
                                    badges=templates,
+                                   badge_images=badge_images,
                                    breadcrumbs=breadcrumbs)
         else:
             breadcrumbs.append({'link': '/badges/', 'text': 'Märken'})

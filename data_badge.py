@@ -210,7 +210,7 @@ class TroopBadge(ndb.Model):
         # Next remove them from the troop badges
         for old_key in to_remove:
             for otb in old_troop_badges:
-                if otb.badge_key == old_key:
+                if otb.key == old_key:
                     otb.key.delete()
         # Now find really new names
         really_new = []

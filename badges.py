@@ -221,8 +221,8 @@ def show(sgroup_url=None, badge_url=None, troop_url=None, person_url=None, actio
             if update_admin != "":
                 progress_admin = update_admin.split(",")
             examiner_name = UserPrefs.current().name
-            logging.info("progress_scout: %s" % progress_scout)
-            logging.info("progress_admin: %s" % progress_admin)
+            # logging.info("progress_scout: %s" % progress_scout)
+            # logging.info("progress_admin: %s" % progress_admin)
             update_badge_progress(badge, progress_scout, "scout", examiner_name)
             update_badge_progress(badge, progress_admin, "admin", examiner_name)
             return "ok"  # Return ok to Ajax call
@@ -288,7 +288,6 @@ def update_badge_progress(badge, progress, part_type, examiner_name):
             badge.update_for_person(scout_key, [], idx_list, examiner_name)
     prev_scout_url = None
     idx_list = []
-    logging.info("progress: %s" % progress)
     for prog in progress:
         scout_url, idx_str = prog.split(":")
         if prev_scout_url is None:
@@ -311,8 +310,8 @@ def render_badge_for_user(request, person_url, badge_url, baselink, breadcrumbs)
     parts_done = BadgePartDone.parts_done(person_key, badge_key)
     parts_scout_done_map = {pd.idx: pd for pd in parts_done if pd.is_scout_part}
     parts_admin_done_map = {pd.idx: pd for pd in parts_done if not pd.is_scout_part}
-    logging.info("scout_map %s" % parts_scout_done_map)
-    logging.info("admin_map %s" % parts_admin_done_map)
+    # logging.info("scout_map %s" % parts_scout_done_map)
+    # logging.info("admin_map %s" % parts_admin_done_map)
     if request.method == "POST":
         update_scout = request.form['update_scout']
         update_admin = request.form['update_admin']
@@ -422,7 +421,7 @@ def render_badge_for_troop(sgroup_url, badge_key, badge, troop_key, troop, basel
 
 
 def compile_progress(persons, persons_progress, badge_parts):
-    "Return [part][person] boolean matrix."
+    """Return [part][person] boolean matrix."""
     parts_progress = []  # [part][person] boolean matrix
     for idx, part in enumerate(badge_parts):
         person_done = []
@@ -442,6 +441,7 @@ def compile_progress(persons, persons_progress, badge_parts):
 @badges.route('/templates/<badge_url>/<action>/', methods=['POST', 'GET'])  # Actions: show, change
 @badges.route('/<sgroup_url>/templates/')
 def show_template(badge_url=None, action=None, sgroup_url=None):
+    """Common templates for badges that scout groups can use."""
     baselink = "/badges/templates/"
     breadcrumbs = [{'link': '/', 'text': 'Hem'}]
     if badge_url is None:
@@ -496,7 +496,6 @@ def show_template(badge_url=None, action=None, sgroup_url=None):
             image_key = badge.image_key
             if image_key:
                 tmpl_image = badge.image_key.get()
-                logging.info("TemplateImage %s" % tmpl_image.name)
                 img_src = tmpl_image.image
             other_templates = filter(lambda t: t.name != badge.name, other_templates)
         other_template_names = ",".join([t.name for t in other_templates])
@@ -524,7 +523,6 @@ def show_template(badge_url=None, action=None, sgroup_url=None):
         else:
             parts_admin = []
         img_data = request.form['img_data']
-        logging.info("img_data=%s" % img_data[:32])
         # logging.info("name: %s, parts: %s", name, parts)
         if badge_url == "newbadge":
             badge = BadgeTemplate.create(name, description, parts_scout, parts_admin, img_data)

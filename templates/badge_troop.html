@@ -202,7 +202,7 @@ $(document).ready(function() {
 		fd.append('action', 'saveparts');
 		fd.append('update_scout', update_scout);
 		fd.append('update_admin', update_admin);
-		console.log("updateBeforePost: " + $(button).attr('class'))
+		// console.log("updateBeforePost: " + $(button).attr('class'))
 		$(button).addClass('data-save-pending');
 		$.ajax({
 			url:'./',
@@ -218,18 +218,10 @@ $(document).ready(function() {
 	});
 
 	function updateAfterPost(btn) {
-		console.log("updateAfterPost: " + btn.attr('class'))
-		resetDirtyButton(btn);
-		console.log("updateAfterPost2: " + btn.attr('class'))
+		btn.removeClass('data-save-pending');
 		disableCheckedChecks();
-		console.log("Done refreshing");
 		initChecked['scout'] = compileCheckedState('scout');  // To avoid double save
 		initChecked['admin'] = compileCheckedState('admin');  // To avoid double save
-		// disable all checked boxed and update the  figures
-	}
-
-    function resetDirtyButton(btn) {
-		btn.removeClass('data-save-pending');
 	}
 });
 </script>

@@ -29,7 +29,7 @@ $(document).ready(function() {
                 checkedBadges.push($(this).val());
             });
         var joinedBadges = checkedBadges.join('|')
-        console.log(joinedBadges)
+        // console.log(joinedBadges)
         var fd = new FormData();
 		fd.append('action', 'savetroopbadges');
 		fd.append('badges', joinedBadges)

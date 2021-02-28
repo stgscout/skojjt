@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-from collections import namedtuple
 
 from google.appengine.api import memcache, users
 from google.appengine.ext import ndb
@@ -171,14 +170,14 @@ class BadgePartDone(ndb.Model):
 
     @staticmethod
     def parts_done(person_key, badge_key):
-        "What parts a specific person has done."
+        """Parts of a badge a specific person has done."""
         bpd = BadgePartDone.query(ndb.AND(BadgePartDone.person_key == person_key,
                                           BadgePartDone.badge_key == badge_key)).order(BadgePartDone.idx).fetch()
         return bpd
 
 
 class BadgeCompleted(ndb.Model):
-    "BadgeCompleted should be created as all requirements are set for a scout and badge."
+    """BadgeCompleted should be created as all requirements are set for a scout and badge."""
     badge_key = ndb.KeyProperty(kind=Badge, required=True)
     person_key = ndb.KeyProperty(kind=Person, required=True)
     date = ndb.DateTimeProperty(auto_now_add=True)
@@ -186,7 +185,7 @@ class BadgeCompleted(ndb.Model):
 
 
 class TroopBadge(ndb.Model):
-    "Badge for troop (avdelning + termin)"
+    """Badge for troop (avdelning + termin)"""
     troop_key = ndb.KeyProperty(kind=Troop)
     badge_key = ndb.KeyProperty(kind=Badge)
 
